@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, Output, EventEmitter } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { QuillEditorComponent } from 'ngx-quill';
 import Quill from 'quill';
@@ -15,6 +15,9 @@ export class QuillRichEditor implements OnInit {
   editorContent: string = '';
   quillModules: any = {};
   isReady: boolean = false;
+  quillInstance: any;
+
+  @Output() contentChanged = new EventEmitter<string>();
 
   constructor(private cdr: ChangeDetectorRef) {}
 
@@ -43,12 +46,7 @@ export class QuillRichEditor implements OnInit {
     } catch (error) {
       console.error('Image Resize Module Error:', error);
       // Resize module error တက်ခဲ့ရင်တောင် Editor ပုံမှန်အတိုင်း ပွင့်လာစေရန် Config ကို အလွတ်ထားပေးပါမည်
-      this.quillModules = {
-        toolbar: [
-          ['bold', 'italic', 'underline'],
-          ['link', 'image'],
-        ],
-      };
+      this.quillModules = {};
     } finally {
       // 5. အားလုံးပြီးမှ Editor ကို Render လုပ်ခိုင်းပါမည်
       this.isReady = true;
@@ -56,9 +54,84 @@ export class QuillRichEditor implements OnInit {
     }
   }
 
+  onContentChange(newContent: string) {
+    this.editorContent = newContent;
+    this.contentChanged.emit(this.editorContent);
+  }
+
+  onEditorCreated(editorInstance: any) {
+    this.quillInstance = editorInstance;
+    this.addTooltips(editorInstance);
+  }
+
+  imageHandler() {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files ? input.files[0] : null;
+      if (file) {
+        try {
+          const compressedBase64 = await this.compressImage(file, 800, 0.7);
+
+          const range = this.quillInstance.getSelection(true);
+          const index = range ? range.index : this.quillInstance.getLength();
+
+          this.quillInstance.insertEmbed(index, 'image', compressedBase64, 'user');
+
+          this.quillInstance.setSelection(index + 1, 'user');
+
+          this.cdr.detectChanges();
+        } catch (error) {
+          console.error('Image compression failed:', error);
+        }
+      }
+    };
+  }
+
+  compressImage(file: File, maxWidth: number, quality: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+
+      reader.onload = (event: any) => {
+        const img = new Image();
+        img.src = event.target.result;
+
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          const compressedDataUrl = canvas.toDataURL('image/webp', quality);
+          resolve(compressedDataUrl);
+        };
+        img.onerror = (error) => reject(error);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  }
+
   addTooltips(quillInstance: any) {
+    this.quillInstance = quillInstance;
+
     // Toolbar Container ကို လှမ်းယူပါမည်
     const toolbar = quillInstance.getModule('toolbar');
+    toolbar.addHandler('image', this.imageHandler.bind(this));
+
     const toolbarElement = toolbar.container;
 
     // Icon (Class Name) နှင့် Tooltip တွင် ပြချင်သော စာသားများကို သတ်မှတ်ပါ

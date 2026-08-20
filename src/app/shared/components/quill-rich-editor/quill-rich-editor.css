@@ -17,3 +17,8 @@
   white-space: pre-wrap;
   margin-bottom: 10px; /* စာပိုဒ် တစ်ပိုဒ်နှင့် တစ်ပိုဒ်ကြား ခွာရန် (လိုလျှင်ထည့်ပါ) */
 }
+
+::ng-deep .ql-editor img {
+  max-width: 300px;
+  max-height: 300px;
+}

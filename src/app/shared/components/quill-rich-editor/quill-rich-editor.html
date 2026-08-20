@@ -5,8 +5,10 @@
     <quill-editor
       [(ngModel)]="editorContent"
       [modules]="quillModules"
+      (ngModelChange)="onContentChange($event)"
       (onEditorCreated)="addTooltips($event)"
-      [style]="{ height: '350px', width: '100% ' }"
+      theme="snow"
+      [styles]="{ height: 'auto', width: '100%' }"
     >
     </quill-editor>
   }
