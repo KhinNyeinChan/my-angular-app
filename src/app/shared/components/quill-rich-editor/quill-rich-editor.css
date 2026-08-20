@@ -1,0 +1,19 @@
+.ql-container {
+  position: relative !important;
+}
+
+/* Container တစ်ခုလုံးအတွက် ဖုံးအုပ်ရန် */
+.result-div {
+  /* Box အပြင်ရောက်သွားပါက အောက်တစ်ကြောင်းသို့ အလိုအလျောက် ဆင်းပေးရန် */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+
+  /* Space လုံးဝမပါဘဲ ဆက်တိုက်ရိုက်ထားသော စာလုံးရှည်ကြီးများကို အတင်းဖြတ်ချရန် */
+  word-break: break-word;
+}
+
+/* [innerHTML] ထဲမှ p tag ကို Effect သက်ရောက်စေရန် ::ng-deep ခံရေးရပါမည် */
+::ng-deep .result-div p {
+  white-space: pre-wrap;
+  margin-bottom: 10px; /* စာပိုဒ် တစ်ပိုဒ်နှင့် တစ်ပိုဒ်ကြား ခွာရန် (လိုလျှင်ထည့်ပါ) */
+}
