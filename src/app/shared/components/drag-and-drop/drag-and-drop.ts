@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Output, signal } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, Output, signal } from '@angular/core';
 
 @Component({
   selector: 'app-drag-and-drop',
@@ -8,12 +8,13 @@ import { Component, EventEmitter, Output, signal } from '@angular/core';
   templateUrl: './drag-and-drop.html',
   styleUrl: './drag-and-drop.css',
 })
-export class DragAndDrop {
+export class DragAndDrop implements OnDestroy {
   @Output() readonly filesChange = new EventEmitter<File[]>();
 
   protected readonly selectedFiles = signal<File[]>([]);
   protected readonly isDragging = signal(false);
   protected readonly errorMessage = signal('');
+  private readonly previewUrls = new Map<File, string>();
 
   protected onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -42,6 +43,7 @@ export class DragAndDrop {
 
   protected removeFile(fileToRemove: File): void {
     const files = this.selectedFiles().filter((file) => file !== fileToRemove);
+    this.revokePreviewUrl(fileToRemove);
     this.selectedFiles.set(files);
     this.filesChange.emit(files);
   }
@@ -51,7 +53,14 @@ export class DragAndDrop {
   }
 
   protected previewUrl(file: File): string {
-    return URL.createObjectURL(file);
+    return this.previewUrls.get(file) ?? '';
+  }
+
+  ngOnDestroy(): void {
+    for (const url of this.previewUrls.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this.previewUrls.clear();
   }
 
   private addFiles(fileList: FileList | null): void {
@@ -70,6 +79,11 @@ export class DragAndDrop {
     const newFiles = incomingFiles.filter(
       (file) => !existingFiles.some((existingFile) => this.sameFile(existingFile, file)),
     );
+    for (const file of newFiles) {
+      if (this.isImage(file)) {
+        this.previewUrls.set(file, URL.createObjectURL(file));
+      }
+    }
     const files = [...existingFiles, ...newFiles];
 
     this.errorMessage.set('');
@@ -83,5 +97,13 @@ export class DragAndDrop {
       firstFile.size === secondFile.size &&
       firstFile.lastModified === secondFile.lastModified
     );
+  }
+
+  private revokePreviewUrl(file: File): void {
+    const url = this.previewUrls.get(file);
+    if (url) {
+      URL.revokeObjectURL(url);
+      this.previewUrls.delete(file);
+    }
   }
 }
